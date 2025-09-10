@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
 // You should store your Mapbox token in an environment variable
-const MAPBOX_ACCESS_TOKEN = 'YOUR_MAPBOX_ACCESS_TOKEN';
+const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1Ijoic3ZpajI4IiwiYSI6ImNtZmRuamh1ZDAzZjEyam9lbnQyZ2wyZ3EifQ.kac5rqRXjrS3QRkSTkYTpA';
 
 // A simple debounce function to limit API calls
 function debounce(func, wait) {
@@ -61,7 +61,7 @@ function App() {
     e.preventDefault();
     if (pickup && destination) {
       try {
-        const response = await fetch('http://localhost:5001/api/ride', {
+        const response = await fetch('http://localhost:5000/api/ride', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
