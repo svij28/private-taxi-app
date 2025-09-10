@@ -7,7 +7,7 @@ This is a simple web application for requesting a taxi ride. It consists of a Re
 Before you begin, ensure you have the following installed:
 - [Python and pip](https://www.python.org/downloads/)
 - [Node.js and npm](https://nodejs.org/en/)
-- A [Google Maps API Key](https://developers.google.com/maps/documentation/javascript/get-api-key) with the **Places API** enabled.
+- A [Mapbox Access Token](https://docs.mapbox.com/help/getting-started/access-tokens/) with the Geocoding API enabled.
 
 ## Getting Started
 
@@ -46,14 +46,11 @@ cd frontend
 npm install
 ```
 
-After installation, you need to configure your Google Maps API key. Open `frontend/src/App.js` and replace the placeholder string "YOUR_GOOGLE_MAPS_API_KEY" with your actual API key.
+After installation, you need to configure your Mapbox Access Token. Open `frontend/src/App.js` and replace the placeholder string "YOUR_MAPBOX_ACCESS_TOKEN" with your actual token.
 
 ```javascript
 // In frontend/src/App.js
-<LoadScript
-  googleMapsApiKey="YOUR_GOOGLE_MAPS_API_KEY" // <-- REPLACE THIS
-  libraries={libraries}
->
+const MAPBOX_ACCESS_TOKEN = 'YOUR_MAPBOX_ACCESS_TOKEN'; // <-- REPLACE THIS
 ```
 
 ## Running the Application
