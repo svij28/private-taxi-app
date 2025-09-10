@@ -1,46 +1,61 @@
-import React, { useState } from 'react';
-import { LoadScript, Autocomplete } from '@react-google-maps/api';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
-const libraries = ['places'];
+// You should store your Mapbox token in an environment variable
+const MAPBOX_ACCESS_TOKEN = 'YOUR_MAPBOX_ACCESS_TOKEN';
+
+// A simple debounce function to limit API calls
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
 
 function App() {
   const [pickup, setPickup] = useState('');
   const [destination, setDestination] = useState('');
   const [message, setMessage] = useState('');
 
-  const [autocompletePickup, setAutocompletePickup] = useState(null);
-  const [autocompleteDestination, setAutocompleteDestination] = useState(null);
+  const [pickupSuggestions, setPickupSuggestions] = useState([]);
+  const [destinationSuggestions, setDestinationSuggestions] = useState([]);
 
-  const onLoadPickup = (autocomplete) => {
-    setAutocompletePickup(autocomplete);
-  };
+  const getSuggestions = async (query, setter) => {
+    if (query.length < 2) {
+      setter([]);
+      return;
+    }
 
-  const onPlaceChangedPickup = () => {
-    if (autocompletePickup !== null) {
-      const place = autocompletePickup.getPlace();
-      if (place && place.formatted_address) {
-        setPickup(place.formatted_address);
-      }
-    } else {
-      console.log('Autocomplete is not loaded yet!');
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+          query
+        )}.json?access_token=${MAPBOX_ACCESS_TOKEN}&autocomplete=true`
+      );
+      const data = await response.json();
+      setter(data.features || []);
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+      setter([]);
     }
   };
 
-  const onLoadDestination = (autocomplete) => {
-    setAutocompleteDestination(autocomplete);
-  };
+  // Create debounced versions of the fetch function
+  const debouncedGetPickupSuggestions = useCallback(debounce(getSuggestions, 300), []);
+  const debouncedGetDestinationSuggestions = useCallback(debounce(getSuggestions, 300), []);
 
-  const onPlaceChangedDestination = () => {
-    if (autocompleteDestination !== null) {
-      const place = autocompleteDestination.getPlace();
-      if (place && place.formatted_address) {
-        setDestination(place.formatted_address);
-      }
-    } else {
-      console.log('Autocomplete is not loaded yet!');
-    }
-  };
+  useEffect(() => {
+    debouncedGetPickupSuggestions(pickup, setPickupSuggestions);
+  }, [pickup, debouncedGetPickupSuggestions]);
+
+  useEffect(() => {
+    debouncedGetDestinationSuggestions(destination, setDestinationSuggestions);
+  }, [destination, debouncedGetDestinationSuggestions]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -73,54 +88,64 @@ function App() {
       alert('Please enter both a pickup location and a destination.');
     }
   };
+  
+  const renderSuggestions = (suggestions, onSelect, setSuggestions) => {
+    if (suggestions.length === 0) {
+      return null;
+    }
+    return (
+      <ul className="suggestions-list">
+        {suggestions.map((place) => (
+          <li
+            key={place.id}
+            onClick={() => {
+              onSelect(place.place_name);
+              setSuggestions([]);
+            }}
+          >
+            {place.place_name}
+          </li>
+        ))}
+      </ul>
+    );
+  };
 
   return (
-    <LoadScript
-      googleMapsApiKey="YOUR_GOOGLE_MAPS_API_KEY"
-      libraries={libraries}
-    >
-      <div className="App">
-        <header className="App-header">
-          <h1>Private Taxi App</h1>
-          <form onSubmit={handleSubmit} className="ride-form">
-            <div className="form-group">
-              <label htmlFor="pickup">Pickup Location:</label>
-              <Autocomplete
-                onLoad={onLoadPickup}
-                onPlaceChanged={onPlaceChangedPickup}
-              >
-                <input
-                  type="text"
-                  id="pickup"
-                  value={pickup}
-                  onChange={(e) => setPickup(e.target.value)}
-                  placeholder="Enter pickup location"
-                  required
-                />
-              </Autocomplete>
-            </div>
-            <div className="form-group">
-              <label htmlFor="destination">Destination:</label>
-              <Autocomplete
-                onLoad={onLoadDestination}
-                onPlaceChanged={onPlaceChangedDestination}
-              >
-                <input
-                  type="text"
-                  id="destination"
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                  placeholder="Enter destination"
-                  required
-                />
-              </Autocomplete>
-            </div>
-            <button type="submit">Find a Ride</button>
-          </form>
-          {message && <p className="message">{message}</p>}
-        </header>
-      </div>
-    </LoadScript>
+    <div className="App">
+      <header className="App-header">
+        <h1>Private Taxi App</h1>
+        <form onSubmit={handleSubmit} className="ride-form">
+          <div className="form-group">
+            <label htmlFor="pickup">Pickup Location:</label>
+            <input
+              type="text"
+              id="pickup"
+              value={pickup}
+              onChange={(e) => setPickup(e.target.value)}
+              placeholder="Enter pickup location"
+              required
+              autoComplete="off"
+            />
+            {renderSuggestions(pickupSuggestions, setPickup, setPickupSuggestions)}
+          </div>
+          <div className="form-group">
+            <label htmlFor="destination">Destination:</label>
+            <input
+              type="text"
+              id="destination"
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              placeholder="Enter destination"
+              required
+              autoComplete="off"
+            />
+            {renderSuggestions(destinationSuggestions, setDestination, setDestinationSuggestions)}
+          </div>
+          <button type="submit">Find a Ride</button>
+        </form>
+        {message && <p className="message">{message}</p>}
+      </header>
+    </div>
   );
 }
 
